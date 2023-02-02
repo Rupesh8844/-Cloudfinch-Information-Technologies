@@ -1,0 +1,21 @@
+package com.it;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Scanner;
+
+public class Try {
+  public static void main(String[] args) throws IOException {
+    URL url = new URL("https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json");
+    InputStream inputStream = url.openStream();
+    Scanner scanner = new Scanner(inputStream);
+    String jsonString ="";
+    
+    while(scanner.hasNext()) {
+    	jsonString += scanner.nextLine();
+    }
+    
+    System.out.println(jsonString);
+  }
+}

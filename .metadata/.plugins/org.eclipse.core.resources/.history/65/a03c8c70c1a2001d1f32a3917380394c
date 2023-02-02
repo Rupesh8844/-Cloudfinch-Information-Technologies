@@ -1,0 +1,73 @@
+package com.it;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+public class Main {
+    public static void main(String[] args) {
+        String apiUrl = "https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json";
+        String response = getResponse(apiUrl);
+        JSONArray countriesArray = new JSONArray(response);
+        Map<String, List<Country>> continents = new HashMap<>();
+        
+        for (int i = 0; i < countriesArray.length(); i++) {
+            JSONObject countryObj = countriesArray.getJSONObject(i);
+            String name = countryObj.getString("name");
+            String region = countryObj.getString("region");
+            double area = countryObj.getDouble("area");
+            
+            Country country = new Country(name, region, area);
+            if (!continents.containsKey(region)) {
+                continents.put(region, new ArrayList<>());
+            }
+            continents.get(region).add(country);
+        }
+        
+        for (Map.Entry<String, List<Country>> entry : continents.entrySet()) {
+            System.out.println("Top 5 largest countries in " + entry.getKey());
+            List<Country> countriesInContinent = entry.getValue();
+            Collections.sort(countriesInContinent, (c1, c2) -> Double.compare(c2.area, c1.area));
+            for (int i = 0; i < 5 && i < countriesInContinent.size(); i++) {
+                System.out.println(countriesInContinent.get(i));
+            }
+            System.out.println();
+        }
+    }
+    
+    private static String getResponse(String apiUrl) {
+        try {
+            URL url = new URL(apiUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+            
+            if (connection.getResponseCode() != 200) {
+                throw new RuntimeException("Failed : HTTP error code : " + connection.getResponseCode());
+            }
+            
+            BufferedReader br = new BufferedReader(new InputStreamReader((connection.getInputStream())));
+            StringBuilder response = new StringBuilder();
+            String output;
+            while ((output = br.readLine()) != null) {
+                response.append(output);
+            }
+            connection.disconnect();
+            
+            return response.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+}

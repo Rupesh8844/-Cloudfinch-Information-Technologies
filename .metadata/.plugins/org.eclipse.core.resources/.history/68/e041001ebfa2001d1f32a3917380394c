@@ -1,0 +1,72 @@
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.codehaus.jackson.map.ObjectMapper;
+
+public class Demo {
+    static final String API_URL = "https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json";
+
+    public static void main(String[] args) {
+        HttpClient client = HttpClientBuilder.create().build();
+        HttpGet request = new HttpGet(API_URL);
+
+        HttpResponse response = client.execute(request);
+
+        ObjectMapper mapper = new ObjectMapper();
+        List<Country> countries = mapper.readValue(response.getEntity().getContent(), mapper.getTypeFactory().constructCollectionType(List.class, Country.class));
+
+        // Group countries by region
+        Map<String, List<Country>> groupedCountries = countries.stream().collect(Collectors.groupingBy(Country::getRegion));
+
+        // Find top 5 largest countries for each region
+        Map<String, List<Country>> largestCountries = new HashMap<>();
+        for (Map.Entry<String, List<Country>> entry : groupedCountries.entrySet()) {
+            List<Country> largestInRegion = entry.getValue().stream().sorted((c1, c2) -> Double.compare(c2.getArea(), c1.getArea())).limit(5).collect(Collectors.toList());
+            largestCountries.put(entry.getKey(), largestInRegion);
+        }
+
+        // Print results
+        for (Map.Entry<String, List<Country>> entry : largestCountries.entrySet()) {
+            System.out.println("Continent: " + entry.getKey());
+            for (Country country : entry.getValue()) {
+                System.out.println("\t" + country.getName() + " - Area: " + country.getArea());
+            }
+        }
+    }
+}
+
+class Country {
+    private String name;
+    private String region;
+    private double area;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
+
+    public double getArea() {
+        return area;
+    }
+
+    public void setArea(double area) {
+        this.area = area;
+    }
+}

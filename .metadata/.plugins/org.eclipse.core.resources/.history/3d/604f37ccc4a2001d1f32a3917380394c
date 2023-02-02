@@ -1,0 +1,34 @@
+package com.it;
+
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+//import com.fasterxml.jackson.databind.ObjectMapper;
+
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        URL url = new URL("https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json");
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object>[] countries = mapper.readValue(url, Map[].class);
+
+        Map<String, Long> regionToArea = 
+            Arrays.stream(countries)
+                .collect(Collectors.groupingBy(
+                    country -> country.get("region").toString(),
+                    Collectors.summingLong(country -> (int)country.get("area"))
+                ));
+
+        regionToArea.entrySet().stream()
+            .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+            .limit(5)
+            .forEach(entry -> {
+                System.out.println("Region: " + entry.getKey());
+                System.out.println("Area: " + entry.getValue());
+                System.out.println();
+            });
+    }
+}

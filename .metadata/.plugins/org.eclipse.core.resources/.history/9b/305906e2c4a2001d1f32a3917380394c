@@ -1,0 +1,79 @@
+package com.it;
+
+//import com.fasterxml.jackson.databind.ObjectMapper;
+
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+public class Main {
+    public static void main(String[] args) {
+        try {
+            String urlString = "https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json";
+            URL url = new URL(urlString);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            int status = con.getResponseCode();
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuilder content = new StringBuilder();
+            while ((inputLine = in.readLine()) != null) {
+                content.append(inputLine);
+            }
+            in.close();
+            con.disconnect();
+
+            JSONArray countries = new JSONArray(content.toString());
+            Map<String, ArrayList<Country>> continentToCountries = new HashMap<>();
+            for (int i = 0; i < countries.length(); i++) {
+                JSONObject country = countries.getJSONObject(i);
+                String name = country.getString("name");
+                String region = country.getString("region");
+                Double area = country.getDouble("area");
+                if (!continentToCountries.containsKey(region)) {
+                    continentToCountries.put(region, new ArrayList<Country>());
+                }
+                continentToCountries.get(region).add(new Country(name, region, area));
+            }
+            for (Map.Entry<String, ArrayList<Country>> entry : continentToCountries.entrySet()) {
+                ArrayList<Country> sortedCountries = entry.getValue();
+                Collections.sort(sortedCountries);
+                System.out.println("Top 5 largest countries in " + entry.getKey());
+                for (int i = 0; i < 5 && i < sortedCountries.size(); i++) {
+                    System.out.println(sortedCountries.get(i));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class Country implements Comparable<Country> {
+        private String name;
+        private String region;
+        private Double area;
+
+        public Country(String name, String region, Double area) {
+            this.name = name;
+            this.region = region;
+            this.area = area;
+        }
+
+        public int compareTo(Country other) {
+            return -Double.compare(this.area, other.area);
+        }
+
+        public String toString() {
+            return name + " - " + area + " sq km";
+        }
+    }
+}

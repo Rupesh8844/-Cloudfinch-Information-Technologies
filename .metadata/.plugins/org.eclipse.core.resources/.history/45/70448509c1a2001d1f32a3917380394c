@@ -1,0 +1,67 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+public class Demo {
+    static final String API_URL = "https://cloudfinch-public.s3.ap-south-1.amazonaws.com/countries.json";
+
+    public static void main(String[] args) throws Exception {
+        // Make the API request
+        URL url = new URL(API_URL);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
+        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = in.readLine()) != null) {
+            response.append(line);
+        }
+        in.close();
+
+        // Parse the response as JSON
+        JSONArray countriesJson = new JSONArray(response.toString());
+
+        // Group countries by region
+        Map<String, List<Country>> groupedCountries = new HashMap<>();
+        for (int i = 0; i < countriesJson.length(); i++) {
+            JSONObject countryJson = countriesJson.getJSONObject(i);
+            String name = countryJson.getString("name");
+            String region = countryJson.getString("region");
+            double area = countryJson.getDouble("area");
+
+            Country country = new Country(name, region, area);
+
+            if (!groupedCountries.containsKey(region)) {
+                groupedCountries.put(region, new ArrayList<>());
+            }
+            groupedCountries.get(region).add(country);
+        }
+
+        // Find top 5 largest countries for each region
+        Map<String, List<Country>> largestCountries = new HashMap<>();
+        for (Map.Entry<String, List<Country>> entry : groupedCountries.entrySet()) {
+            List<Country> countriesInRegion = entry.getValue();
+            countriesInRegion.sort(Comparator.comparingDouble(Country::getArea).reversed());
+            largestCountries.put(entry.getKey(), countriesInRegion.subList(0, Math.min(5, countriesInRegion.size())));
+        }
+
+        // Print results
+        for (Map.Entry<String, List<Country>> entry : largestCountries.entrySet()) {
+            System.out.println("Continent: " + entry.getKey());
+            for (Country country : entry.getValue()) {
+                System.out.println("\t" + country.getName() + " - Area: " + country.getArea());
+            }
+        }
+    }
+}
+
+
